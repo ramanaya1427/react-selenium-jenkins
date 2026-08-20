@@ -21,17 +21,45 @@ pipeline {
 
         stage('Start React Application') {
             steps {
-                bat '''
-                    @echo off
-                    echo Starting React application...
+                powershell '''
+                    Write-Host "Starting React application..."
 
-                    set JENKINS_NODE_COOKIE=dontKillMe
-                    set BROWSER=none
+                    $workspace = $env:WORKSPACE
 
-                    start "ReactApp" /B cmd /c "npm start"
+                    Start-Process `
+                        -FilePath "cmd.exe" `
+                        -ArgumentList "/c npm start" `
+                        -WorkingDirectory $workspace `
+                        -WindowStyle Hidden
 
-                    echo Waiting for React application...
-                    timeout /t 20 /nobreak
+                    Write-Host "Waiting for React application..."
+
+                    $ready = $false
+
+                    for ($i = 1; $i -le 30; $i++) {
+                        Start-Sleep -Seconds 2
+
+                        try {
+                            $response = Invoke-WebRequest `
+                                -Uri "http://localhost:3000" `
+                                -UseBasicParsing `
+                                -TimeoutSec 2
+
+                            if ($response.StatusCode -eq 200) {
+                                $ready = $true
+                                Write-Host "React application is running!"
+                                break
+                            }
+                        }
+                        catch {
+                            Write-Host "Waiting..."
+                        }
+                    }
+
+                    if (-not $ready) {
+                        Write-Error "React application did not start on port 3000."
+                        exit 1
+                    }
                 '''
             }
         }
@@ -41,7 +69,6 @@ pipeline {
                 bat '''
                     @echo off
                     echo Running Selenium UI tests...
-
                     npx mocha src/test/selenium.test.js
                 '''
             }
@@ -53,4 +80,4 @@ pipeline {
             echo 'React Selenium pipeline completed.'
         }
     }
-} 
+}
