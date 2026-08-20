@@ -1,77 +1,59 @@
-stage('Start React Application') {
-    steps {
-        powershell '''
-            Write-Host "Starting React application..."
+pipeline {
+    agent any
 
-            $workspace = $env:WORKSPACE
-            $logFile = Join-Path $workspace "react.log"
-            $errorLogFile = Join-Path $workspace "react-error.log"
+    stages {
 
-            if (Test-Path $logFile) {
-                Remove-Item $logFile -Force
+        stage('Checkout Source Code') {
+            steps {
+                checkout scm
             }
+        }
 
-            if (Test-Path $errorLogFile) {
-                Remove-Item $errorLogFile -Force
+        stage('Install Dependencies') {
+            steps {
+                bat 'npm install'
             }
+        }
 
-            $env:BROWSER = "none"
+        stage('Start React Application') {
+            steps {
+                bat '''
+                    @echo off
+                    echo Starting React application...
 
-            Start-Process `
-                -FilePath "npm.cmd" `
-                -ArgumentList "start" `
-                -WorkingDirectory $workspace `
-                -RedirectStandardOutput $logFile `
-                -RedirectStandardError $errorLogFile `
-                -WindowStyle Hidden
+                    set BROWSER=none
+                    start "ReactApp" /B cmd /c "npm start"
 
-            Write-Host "Waiting for React application..."
+                    echo Waiting for React application...
+                    timeout /t 20 /nobreak
 
-            $ready = $false
+                    echo Checking React application...
+                    curl -I http://localhost:3000
 
-            for ($i = 1; $i -le 30; $i++) {
+                    if errorlevel 1 (
+                        echo React application failed to start.
+                        exit /b 1
+                    )
 
-                Start-Sleep -Seconds 2
-
-                if (Test-Path $logFile) {
-                    Write-Host "--- React output ---"
-                    Get-Content $logFile -Tail 10
-                }
-
-                try {
-                    $response = Invoke-WebRequest `
-                        -Uri "http://localhost:3000" `
-                        -UseBasicParsing `
-                        -TimeoutSec 2
-
-                    if ($response.StatusCode -eq 200) {
-                        $ready = $true
-                        Write-Host "React application is running!"
-                        break
-                    }
-                }
-                catch {
-                    Write-Host "Waiting..."
-                }
+                    echo React application is running.
+                '''
             }
+        }
 
-            if (-not $ready) {
-
-                Write-Host "========== React Error Log =========="
-
-                if (Test-Path $errorLogFile) {
-                    Get-Content $errorLogFile
-                }
-
-                Write-Host "========== React Output Log =========="
-
-                if (Test-Path $logFile) {
-                    Get-Content $logFile
-                }
-
-                Write-Error "React application did not start on port 3000."
-                exit 1
+        stage('Execute Selenium Tests') {
+            steps {
+                bat '''
+                    @echo off
+                    echo Running Selenium UI tests...
+                    npx mocha src/test/selenium.test.js
+                '''
             }
-        '''
+        }
+    }
+
+    post {
+        always {
+            echo 'React Selenium pipeline completed.'
+        }
     }
 }
