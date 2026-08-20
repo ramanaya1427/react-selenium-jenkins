@@ -1,25 +1,37 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import "./App.css";
 
 function App() {
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setMessage("Welcome to the React Selenium Test!");
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h1>React Selenium Testing</h1>
+
+      <p id="description">
+        This application is tested using Selenium WebDriverJS.
+      </p>
+
+      <form onSubmit={handleSubmit}>
+        <input
+          id="name"
+          type="text"
+          placeholder="Enter your name"
+        />
+
+        <button id="submit-button" type="submit">
+          Submit
+        </button>
+      </form>
+
+      {message && <p id="success-message">{message}</p>}
     </div>
   );
 }
 
-export default App;
+export default App; 
