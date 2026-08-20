@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        NODE_PATH = 'C:\\Program Files\\nodejs'
-    }
-
     stages {
 
         stage('Checkout Source Code') {
@@ -29,10 +25,13 @@ pipeline {
                     @echo off
                     echo Starting React application...
 
-                    start "ReactApp" /B cmd /c "npm start > react.log 2>&1"
+                    set JENKINS_NODE_COOKIE=dontKillMe
+                    set BROWSER=none
+
+                    start "ReactApp" /B cmd /c "npm start"
 
                     echo Waiting for React application...
-                    timeout /t 15 /nobreak
+                    timeout /t 20 /nobreak
                 '''
             }
         }
@@ -54,4 +53,4 @@ pipeline {
             echo 'React Selenium pipeline completed.'
         }
     }
-}
+} 
